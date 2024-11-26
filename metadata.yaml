@@ -1,0 +1,6 @@
+homepage: "https://www.cookiebanners.nl/"
+documentation: "https://www.cookiebanners.nl/"
+versions:
+  # Latest version
+  - sha: c9dbac44fa83f7807045d3966b14f2d4836271f1
+    changeNotes: Initial release
