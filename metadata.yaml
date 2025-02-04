@@ -2,6 +2,8 @@ homepage: "https://www.cookiebanners.nl/"
 documentation: "https://www.cookiebanners.nl/"
 versions:
   # Latest version
+  - sha: 4ead47070f6daa696dcc9348c15b6890058db44a
+    changeNotes: Add support for url_passthrough and ads_data_redaction
   - sha: 5f78a6a28360fab10c2bf519690cd41feaf3c784
     changeNotes: Add wait_for_update to consent default state
   - sha: c9dbac44fa83f7807045d3966b14f2d4836271f1
