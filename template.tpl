@@ -10,7 +10,7 @@ ___INFO___
 
 {
   "type": "TAG",
-  "id": "cvt_temp_public_id",
+  "id": "cvt_P8RK8",
   "version": 1,
   "securityGroups": [],
   "displayName": "Cookiebanners.nl Tag Template",
@@ -40,6 +40,15 @@ ___TEMPLATE_PARAMETERS___
       }
     ],
     "alwaysInSummary": true
+  },
+  {
+    "type": "CHECKBOX",
+    "name": "dlPush",
+    "checkboxText": "Push initial state to dataLayer",
+    "simpleValueType": true,
+    "alwaysInSummary": false,
+    "help": "Check this box to push gtm_consent_default and gtm_consent_update events to dataLayer if consent state is available when the page loads. This is not generally necessary, as the Consent Mode calls are done immediately, and you can use regular triggers like Initialization or All Pages to fire tags that are Consent Mode sensitive (assuming this Cookiebanners.nl tag fires on Consent Initialization).",
+    "defaultValue": false
   },
   {
     "type": "GROUP",
@@ -73,15 +82,28 @@ ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 const createArgumentsQueue = require('createArgumentsQueue');
 const createQueue = require('createQueue');
 const encodeUriComponent = require('encodeUriComponent');
+const getCookieValues = require('getCookieValues');
+const gtagSet = require('gtagSet');
 const injectScript = require('injectScript');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
 const setDefaultConsentState = require('setDefaultConsentState');
 const templateStorage = require('templateStorage');
+const updateConsentState = require('updateConsentState');
 
-const CDN_URL = 'https://portal.cookiebanners.nl/banner2.js?id=' + encodeUriComponent(data.id) + '&url=https://portal.cookiebanners.nl';
+const CDN_URL = 'https://portal.cookiebanners.nl/banner3.js?id=' + encodeUriComponent(data.id) + '&url=https://portal.cookiebanners.nl';
 const LOG_PREFIX = '[Travyk] ';
-const gtag = createArgumentsQueue('gtag', 'dataLayer');
+
+const cookieConsent = getCookieValues('cookie-consent');
+const functionalCookies = getCookieValues('functional-cookies');
+const marketingCookies = getCookieValues('marketing-cookies');
+
+const getConsentCookie = cookieArray => {
+  if (cookieArray.length > 0) {
+    return cookieArray[0];
+  }
+  return;
+};
 
 const defaultSettings = {
   ad_storage: 'denied',
@@ -93,6 +115,17 @@ const defaultSettings = {
   security_storage: 'granted',
   wait_for_update: 500
 };
+
+const initialUpdate = {
+  ad_storage: getConsentCookie(marketingCookies),
+  analytics_storage: getConsentCookie(functionalCookies),
+  ad_user_data: getConsentCookie(functionalCookies),
+  ad_personalization: getConsentCookie(marketingCookies),
+  functionality_storage: 'granted',
+  personalization_storage: 'granted',
+  security_storage: 'granted'
+};
+
 const uetqPush = createQueue('uetq');
 const dataLayerPush = createQueue('dataLayer');
 
@@ -107,18 +140,35 @@ const failInject = () => {
 
 const defaultSet = templateStorage.getItem('defaultSet');
 if (!defaultSet) {
-  if (data.url_passthrough) {
-    gtag('set', 'url_passthrough', true);
-  }
-  if (data.ads_data_redaction) {
-    gtag('set', 'ads_data_redaction', true);
+  if (data.url_passthrough || data.ads_data_redaction) {
+    gtagSet({
+      url_passthrough: data.url_passthrough || false,
+      ads_data_redaction: data.ads_data_redaction || false
+    });
   }
   setDefaultConsentState(defaultSettings);
-  const dlObject = JSON.parse(JSON.stringify(defaultSettings));
-  dlObject.event = 'gtm_consent_default';
-  dataLayerPush(dlObject);
+  if (data.dlPush) {
+    const defaultObj = {
+      event: 'gtm_consent_default',
+      eventModel: defaultSettings
+    };
+    dataLayerPush(defaultObj);
+  }
   uetqPush('consent', 'default', {ad_storage: 'denied'});
   templateStorage.setItem('defaultSet', true);
+}
+
+if (getConsentCookie(cookieConsent)) {
+  // cookie-consent found, fire automatic update
+  updateConsentState(initialUpdate);
+  if (data.dlPush) {
+    const updateObj = {
+      event: 'gtm_consent_update',
+      eventModel: initialUpdate
+    };
+    dataLayerPush(updateObj);
+  }
+  uetqPush('consent', 'update', {ad_storage: getConsentCookie(marketingCookies)});
 }
 
 injectScript(CDN_URL, data.gtmOnSuccess, failInject, 'travyk');
@@ -235,45 +285,6 @@ ___WEB_PERMISSIONS___
                   {
                     "type": 8,
                     "boolean": false
-                  }
-                ]
-              },
-              {
-                "type": 3,
-                "mapKey": [
-                  {
-                    "type": 1,
-                    "string": "key"
-                  },
-                  {
-                    "type": 1,
-                    "string": "read"
-                  },
-                  {
-                    "type": 1,
-                    "string": "write"
-                  },
-                  {
-                    "type": 1,
-                    "string": "execute"
-                  }
-                ],
-                "mapValue": [
-                  {
-                    "type": 1,
-                    "string": "gtag"
-                  },
-                  {
-                    "type": 8,
-                    "boolean": true
-                  },
-                  {
-                    "type": 8,
-                    "boolean": true
-                  },
-                  {
-                    "type": 8,
-                    "boolean": true
                   }
                 ]
               }
@@ -582,6 +593,77 @@ ___WEB_PERMISSIONS___
                     "boolean": true
                   }
                 ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "get_cookies",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "cookieAccess",
+          "value": {
+            "type": 1,
+            "string": "specific"
+          }
+        },
+        {
+          "key": "cookieNames",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 1,
+                "string": "marketing-cookies"
+              },
+              {
+                "type": 1,
+                "string": "functional-cookies"
+              },
+              {
+                "type": 1,
+                "string": "cookie-consent"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "write_data_layer",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "keyPatterns",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 1,
+                "string": "ads_data_redaction"
+              },
+              {
+                "type": 1,
+                "string": "url_passthrough"
               }
             ]
           }
