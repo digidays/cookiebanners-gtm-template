@@ -2,6 +2,8 @@ homepage: "https://www.cookiebanners.nl/"
 documentation: "https://www.cookiebanners.nl/"
 versions:
   # Latest version
+  - sha: 38278c2f35954d4fbe0e5904c32fde5b8c20fc9b
+    changeNotes: Push Consent Update event automatically if consent has been determined.
   - sha: 4ead47070f6daa696dcc9348c15b6890058db44a
     changeNotes: Add support for url_passthrough and ads_data_redaction
   - sha: 5f78a6a28360fab10c2bf519690cd41feaf3c784
